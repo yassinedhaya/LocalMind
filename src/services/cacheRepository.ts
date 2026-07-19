@@ -57,3 +57,9 @@ export const dashboardCache: DashboardCache = {
     cached = null;
   },
 };
+
+/** Call this after any mutation to notes/tasks/tables/timer so the
+ *  dashboard reloads fresh data the next time it is shown. */
+export function invalidateDashboard(): void {
+  dashboardCache.invalidate();
+}

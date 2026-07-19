@@ -17,7 +17,10 @@ export function useHomeDashboard() {
 
   useEffect(() => {
     let active = true;
-    dashboardCache.get().then((d) => {
+    // Always reload fresh from storage on mount: the dashboard is remounted
+    // each time the user navigates back to it, so a stale cache must not
+    // hide newly added tables/notes/tasks/timer sessions.
+    dashboardCache.refresh().then((d) => {
       if (active) {
         setData(d);
         setLoading(false);

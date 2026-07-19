@@ -1,4 +1,5 @@
 import type { Note } from '../types/noteTypes';
+import { invalidateDashboard } from './cacheRepository';
 
 let notesCache: Note[] = [];
 
@@ -20,6 +21,7 @@ export const NoteStorage = {
       updatedAt: now,
     };
     notesCache.unshift(newNote);
+    invalidateDashboard();
     return Promise.resolve(newNote);
   },
 
@@ -27,12 +29,14 @@ export const NoteStorage = {
     const index = notesCache.findIndex((n) => n.id === id);
     if (index === -1) return Promise.resolve(undefined);
     notesCache[index] = { ...notesCache[index], ...updates, updatedAt: Date.now() };
+    invalidateDashboard();
     return Promise.resolve(notesCache[index]);
   },
 
   remove(id: string): Promise<boolean> {
     const len = notesCache.length;
     notesCache = notesCache.filter((n) => n.id !== id);
+    invalidateDashboard();
     return Promise.resolve(notesCache.length !== len);
   },
 

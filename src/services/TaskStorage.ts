@@ -1,4 +1,5 @@
 import type { Task, TaskStatus } from '../types/taskTypes';
+import { invalidateDashboard } from './cacheRepository';
 
 let tasksCache: Task[] = [];
 
@@ -20,6 +21,7 @@ export const TaskStorage = {
       updatedAt: now,
     };
     tasksCache.unshift(newTask);
+    invalidateDashboard();
     return Promise.resolve(newTask);
   },
 
@@ -27,12 +29,14 @@ export const TaskStorage = {
     const index = tasksCache.findIndex((t) => t.id === id);
     if (index === -1) return Promise.resolve(undefined);
     tasksCache[index] = { ...tasksCache[index], ...updates, updatedAt: Date.now() };
+    invalidateDashboard();
     return Promise.resolve(tasksCache[index]);
   },
 
   remove(id: string): Promise<boolean> {
     const len = tasksCache.length;
     tasksCache = tasksCache.filter((t) => t.id !== id);
+    invalidateDashboard();
     return Promise.resolve(tasksCache.length !== len);
   },
 

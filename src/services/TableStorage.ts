@@ -1,4 +1,5 @@
 import type { TableData } from '../types/tableTypes';
+import { invalidateDashboard } from './cacheRepository';
 
 let tableCache: TableData[] = [];
 
@@ -20,6 +21,7 @@ export const TableStorage = {
       updatedAt: now,
     };
     tableCache.unshift(newTable);
+    invalidateDashboard();
     return Promise.resolve(newTable);
   },
 
@@ -27,12 +29,14 @@ export const TableStorage = {
     const index = tableCache.findIndex((t) => t.id === id);
     if (index === -1) return Promise.resolve(undefined);
     tableCache[index] = { ...tableCache[index], ...updates, updatedAt: Date.now() };
+    invalidateDashboard();
     return Promise.resolve(tableCache[index]);
   },
 
   remove(id: string): Promise<boolean> {
     const len = tableCache.length;
     tableCache = tableCache.filter((t) => t.id !== id);
+    invalidateDashboard();
     return Promise.resolve(tableCache.length !== len);
   },
 

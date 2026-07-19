@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TimerConfig, TimerSession, DEFAULT_TIMER_CONFIG } from '../types/timerTypes';
+import { invalidateDashboard } from './cacheRepository';
 
 const SESSIONS_KEY = 'timer_sessions';
 const CONFIG_KEY = 'timer_config';
@@ -48,6 +49,7 @@ export const TimerStorage = {
       };
       const updated = [newSession, ...sessions].slice(0, 500);
       await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(updated));
+      invalidateDashboard();
     } catch (e) {
       console.warn('Failed to save timer session:', e);
     }
