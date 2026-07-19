@@ -643,43 +643,62 @@ class GemmaModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
                 val pm = Regex("/Type\\s*/Page(?![s/])").findAll(ascii)
                 pageCount = pm.count()
 
-                // Find stream ... endstream blocks, inflate Flate, scan for text ops.
-                val streamRegex = Regex("stream\\r?\\n([\\s\\S]*?)\\r?\\nendstream")
-                streamRegex.findAll(ascii).forEach { sm ->
-                    val raw = sm.groupValues[1]
-                    var bytes: ByteArray? = null
-                    // Try raw first (uncompressed content streams).
-                    if (raw.contains("Tj") || raw.contains("TJ")) {
-                        bytes = raw.toByteArray(Charsets.US_ASCII)
+                // Find stream ... endstream blocks in the RAW bytes (binary-safe).
+                // PDF content streams are often Flate-compressed, so we must not
+                // round-trip them through an ASCII String (that corrupts bytes > 127).
+                val streamMarker = "stream".toByteArray(Charsets.US_ASCII)
+                val endMarker = "endstream".toByteArray(Charsets.US_ASCII)
+                var pos = 0
+                while (pos < data.size) {
+                    val sIdx = indexOf(data, streamMarker, pos)
+                    if (sIdx < 0) break
+                    // Skip past "stream" and the following EOL (\n or \r\n).
+                    var p = sIdx + streamMarker.size
+                    if (p < data.size && data[p] == '\r'.code.toByte()) p++
+                    if (p < data.size && data[p] == '\n'.code.toByte()) p++
+                    val eIdx = indexOf(data, endMarker, p)
+                    if (eIdx < 0) break
+                    // Trim a single trailing EOL before "endstream".
+                    var end = eIdx
+                    if (end > p && data[end - 1] == '\n'.code.toByte()) end--
+                    if (end > p && data[end - 1] == '\r'.code.toByte()) end--
+                    val rawBytes = data.copyOfRange(p, end)
+
+                    var textBytes: ByteArray? = null
+                    // Try raw first (uncompressed content stream).
+                    val rawStr = String(rawBytes, Charsets.ISO_8859_1)
+                    if (rawStr.contains("Tj") || rawStr.contains("TJ")) {
+                        textBytes = rawBytes
                     } else {
-                        // Try inflate. PDF /FlateDecode streams are zlib-wrapped
-                        // (with a 2-byte zlib header), so use nowrap=false.
+                        // Try inflate. PDF /FlateDecode streams are zlib-wrapped.
                         try {
-                            val input = raw.toByteArray(Charsets.ISO_8859_1)
                             val inflater = java.util.zip.Inflater(false)
-                            inflater.setInput(input)
+                            inflater.setInput(rawBytes)
                             val out = ByteArrayOutputStream()
                             val buf = ByteArray(64 * 1024)
                             while (!inflater.finished()) {
                                 val n = inflater.inflate(buf)
-                                if (n == 0 && inflater.needsInput()) break
                                 if (n > 0) out.write(buf, 0, n)
+                                if (n == 0) {
+                                    if (inflater.finished() || inflater.needsDictionary() || inflater.needsInput()) break
+                                }
                             }
                             inflater.end()
                             val inflated = out.toByteArray()
                             if (inflated.isNotEmpty()) {
                                 val txt = String(inflated, Charsets.ISO_8859_1)
                                 if (txt.contains("Tj") || txt.contains("TJ")) {
-                                    bytes = txt.toByteArray(Charsets.ISO_8859_1)
+                                    textBytes = inflated
                                 }
                             }
                         } catch (_: Exception) {
                             // ignore and move on
                         }
                     }
-                    if (bytes != null) {
-                        sb.append(scanPdfTextOps(String(bytes, Charsets.ISO_8859_1))).append(" ")
+                    if (textBytes != null) {
+                        sb.append(scanPdfTextOps(String(textBytes, Charsets.ISO_8859_1))).append(" ")
                     }
+                    pos = eIdx + endMarker.size
                 }
 
                 val text = sb.toString().replace(Regex("[ \\t]+"), " ").replace(Regex("\n{2,}"), "\n").trim()
@@ -726,6 +745,20 @@ class GemmaModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
                 val c = mr.groupValues[1].toInt(16)
                 if (c > 0) String(charArrayOf(c.toChar())) else ""
             }
+    }
+
+    private fun indexOf(haystack: ByteArray, needle: ByteArray, from: Int): Int {
+        if (needle.isEmpty()) return from
+        var i = from
+        while (i + needle.size <= haystack.size) {
+            var match = true
+            for (j in needle.indices) {
+                if (haystack[i + j] != needle[j]) { match = false; break }
+            }
+            if (match) return i
+            i++
+        }
+        return -1
     }
 
     private fun closeEngineInternal() {
