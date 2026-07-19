@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- White rounded chat bubble (kept inside the 72dp safe zone) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,26
+            C40.2,26 29,35.6 29,47.4
+            C29,55.6 34.4,62.7 42,66.9
+            L42,80
+            L55.4,71.2
+            C56.2,71.3 57,71.4 57.9,71.4
+            C71.7,71.4 83,61.8 83,47.4
+            C83,35.6 71.8,26 54,26 Z" />
+    <!-- Coral spark / mind dot accent -->
+    <path
+        android:fillColor="#FF6B5E"
+        android:pathData="M54,38
+            m-5,0
+            a5,5 0 1,0 10,0
+            a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#FF6B5E"
+        android:pathData="M44,52
+            m-3.5,0
+            a3.5,3.5 0 1,0 7,0
+            a3.5,3.5 0 1,0 -7,0" />
+    <path
+        android:fillColor="#FF6B5E"
+        android:pathData="M63,52
+            m-3.5,0
+            a3.5,3.5 0 1,0 7,0
+            a3.5,3.5 0 1,0 -7,0" />
+</vector>
